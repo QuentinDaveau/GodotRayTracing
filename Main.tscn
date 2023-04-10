@@ -1,6 +1,7 @@
-[gd_scene load_steps=7 format=3 uid="uid://dsoj8mkno20tr"]
+[gd_scene load_steps=8 format=3 uid="uid://dsoj8mkno20tr"]
 
 [ext_resource type="Script" path="res://rayTraceCamera.gd" id="2_4c22r"]
+[ext_resource type="Texture2D" uid="uid://dvnis6lalcjqi" path="res://icon.svg" id="2_bgsm1"]
 [ext_resource type="Script" path="res://ComputeOutput.gd" id="3_o2n48"]
 [ext_resource type="Script" path="res://rayTracedSphere.gd" id="3_qd2u3"]
 
@@ -28,7 +29,7 @@ transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -
 shadow_enabled = true
 
 [node name="Camera3D" type="Camera3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.86389)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 20)
 current = true
 script = ExtResource("2_4c22r")
 
@@ -42,8 +43,10 @@ grow_vertical = 2
 pivot_offset = Vector2(576, 324)
 size_flags_horizontal = 4
 size_flags_vertical = 4
+texture = ExtResource("2_bgsm1")
 expand_mode = 2
 script = ExtResource("3_o2n48")
 
 [node name="RayTracedSphere" type="CSGSphere3D" parent="." groups=["RayTracedObjects"]]
+radius = 5.0
 script = ExtResource("3_qd2u3")

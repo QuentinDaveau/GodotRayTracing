@@ -15,17 +15,14 @@ var spheres: Array[RayTracedSphere] = []
 var light := %DirectionalLight3D
 
 
-func matrix_to_bytes(t : Transform3D):
+func matrix_to_bytes(t : Projection):
 	# Helper function
 	# Encodes the values of a "global_transform" into bytes
-	
-	var basis : Basis = t.basis
-	var origin : Vector3 = t.origin
 	var bytes : PackedByteArray = PackedFloat32Array([
-		basis.x.x, basis.x.y, basis.x.z, 1.0,
-		basis.y.x, basis.y.y, basis.y.z, 1.0,
-		basis.z.x, basis.z.y, basis.z.z, 1.0,
-		origin.x, origin.y, origin.z, 1.0
+		t.x.x, t.x.y, t.x.z, t.x.w,
+		t.y.x, t.y.y, t.y.z, t.y.w,
+		t.z.x, t.z.y, t.z.z, t.z.w,
+		t.w.x, t.w.y, t.w.z, t.w.w
 	]).to_byte_array()
 	return bytes
 
@@ -71,8 +68,8 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	if (Input.is_action_pressed("RClick") && Input.get_last_mouse_velocity().length_squared() > 0.0):
-		transform = transform.rotated(Vector3.UP, -Input.get_last_mouse_velocity().x * delta * 0.01)
-		transform = transform.rotated(Vector3.UP.cross(transform.basis.z).normalized(), -Input.get_last_mouse_velocity().y * delta * 0.01)
+		transform = transform.rotated(Vector3.UP, -Input.get_last_mouse_velocity().x * delta * 0.05)
+		transform = transform.rotated(Vector3.UP.cross(transform.basis.z).normalized(), -Input.get_last_mouse_velocity().y * delta * 0.05)
 	
 	_render(delta)
 	
@@ -102,11 +99,10 @@ func _render(delta: float) -> void:
 	bindings[1] = params_uniform
 	
 	# Camera Matrices Buffer
-	var camera_projection = Projection(global_transform)
-	var aspect := get_viewport().get_visible_rect().size.x / get_viewport().get_visible_rect().size.y
-	camera_projection.create_perspective(fov, aspect, near, far)
 	var camera_matrices_bytes := PackedByteArray()
-	camera_matrices_bytes.append_array(matrix_to_bytes(camera_projection.create_perspective(fov, aspect, near, far)))
+	camera_matrices_bytes.append_array(matrix_to_bytes(Projection(global_transform))) # transform
+	var aspect := get_viewport().get_visible_rect().size.x / get_viewport().get_visible_rect().size.y
+	camera_matrices_bytes.append_array(matrix_to_bytes(Projection.create_perspective(fov, aspect, near, far))) # projection
 	var camera_matrices_buffer = rd.storage_buffer_create(camera_matrices_bytes.size(), camera_matrices_bytes)
 	var camera_matrices_uniform := RDUniform.new()
 	camera_matrices_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER
@@ -128,10 +124,11 @@ func _render(delta: float) -> void:
 	bindings[3] = light_data_uniform
 	
 	# Spheres buffer
-	var spheres_data_bytes := PackedByteArray([])
+	var spheres_data := PackedFloat32Array([])
 	for sphere in spheres:
-		spheres_data_bytes += sphere.GetFormattedData()
-	var spheres_data_buffer = rd.storage_buffer_create(spheres_data_bytes.size(),spheres_data_bytes)
+		spheres_data += sphere.GetFormattedData()
+	var spheres_data_bytes := spheres_data.to_byte_array()
+	var spheres_data_buffer = rd.storage_buffer_create(spheres_data_bytes.size(), spheres_data_bytes)
 	var spheres_data_uniform := RDUniform.new()
 	spheres_data_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER
 	spheres_data_uniform.binding = 4
