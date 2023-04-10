@@ -1,0 +1,49 @@
+[gd_scene load_steps=7 format=3 uid="uid://dsoj8mkno20tr"]
+
+[ext_resource type="Script" path="res://rayTraceCamera.gd" id="2_4c22r"]
+[ext_resource type="Script" path="res://ComputeOutput.gd" id="3_o2n48"]
+[ext_resource type="Script" path="res://rayTracedSphere.gd" id="3_qd2u3"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_iinju"]
+sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+ground_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
+
+[sub_resource type="Sky" id="Sky_sjqv0"]
+sky_material = SubResource("ProceduralSkyMaterial_iinju")
+
+[sub_resource type="Environment" id="Environment_dcdbx"]
+background_mode = 2
+sky = SubResource("Sky_sjqv0")
+tonemap_mode = 2
+glow_enabled = true
+
+[node name="Node3D" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_dcdbx")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+unique_name_in_owner = true
+transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
+shadow_enabled = true
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4.86389)
+current = true
+script = ExtResource("2_4c22r")
+
+[node name="TextureRect" type="TextureRect" parent="."]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+pivot_offset = Vector2(576, 324)
+size_flags_horizontal = 4
+size_flags_vertical = 4
+expand_mode = 2
+script = ExtResource("3_o2n48")
+
+[node name="RayTracedSphere" type="CSGSphere3D" parent="." groups=["RayTracedObjects"]]
+script = ExtResource("3_qd2u3")
