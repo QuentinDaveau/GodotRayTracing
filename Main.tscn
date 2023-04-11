@@ -1,9 +1,10 @@
-[gd_scene load_steps=8 format=3 uid="uid://dsoj8mkno20tr"]
+[gd_scene load_steps=9 format=3 uid="uid://dsoj8mkno20tr"]
 
 [ext_resource type="Script" path="res://rayTraceCamera.gd" id="2_4c22r"]
 [ext_resource type="Texture2D" uid="uid://dvnis6lalcjqi" path="res://icon.svg" id="2_bgsm1"]
 [ext_resource type="Script" path="res://ComputeOutput.gd" id="3_o2n48"]
 [ext_resource type="Script" path="res://rayTracedSphere.gd" id="3_qd2u3"]
+[ext_resource type="Script" path="res://RayTracedPlane.gd" id="5_44bmy"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_iinju"]
 sky_horizon_color = Color(0.64625, 0.65575, 0.67075, 1)
@@ -47,6 +48,25 @@ texture = ExtResource("2_bgsm1")
 expand_mode = 2
 script = ExtResource("3_o2n48")
 
-[node name="RayTracedSphere" type="CSGSphere3D" parent="." groups=["RayTracedObjects"]]
+[node name="RayTracedSphere" type="CSGSphere3D" parent="." groups=["RayTracedObjects", "RayTracedSpheres"]]
 radius = 5.0
 script = ExtResource("3_qd2u3")
+_albedo = Color(1, 1, 1, 1)
+
+[node name="RayTracedSphere2" type="CSGSphere3D" parent="." groups=["RayTracedObjects", "RayTracedSpheres"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.86, 3.47126, -1.06165)
+radius = 5.0
+script = ExtResource("3_qd2u3")
+_albedo = Color(1, 1, 1, 1)
+
+[node name="RayTracedSphere3" type="CSGSphere3D" parent="." groups=["RayTracedObjects", "RayTracedSpheres"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28.3958, 24.7896, -6.91492)
+radius = 5.0
+script = ExtResource("3_qd2u3")
+_albedo = Color(1, 1, 1, 1)
+
+[node name="RayTracedPlane" type="CSGBox3D" parent="." groups=["RayTracedObjects", "RayTracedPlanes"]]
+transform = Transform3D(1, 0, 0, 0, 1, 2.98023e-08, 0, -2.98023e-08, 1, -8.04066, -0.824553, -5.67011)
+size = Vector3(1000, 0.1, 1000)
+script = ExtResource("5_44bmy")
+_albedo = Color(0.231373, 0.713726, 0.25098, 1)

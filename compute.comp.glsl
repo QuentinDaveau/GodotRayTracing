@@ -13,6 +13,18 @@ struct Sphere
 	float 	subsurface_scattering;
 };
 
+struct Plane
+{
+	vec3 	location;
+	vec3 	normal;
+	vec2	scale;
+	vec4 	color;
+	float 	emission;
+	float 	roughness;
+	float 	clearcoat;
+	float 	subsurface_scattering;
+};
+
 struct Ray 
 {
 	vec3 origin;
@@ -54,10 +66,28 @@ m_lightBuffer;
 
 
 layout(set = 0, binding = 4, std430) restrict buffer SpheresBuffer {
-	Sphere spheres[32];
+	Sphere spheres[];
 }
 m_spheresBuffer;
 
+
+
+layout(set = 0, binding = 5, std430) restrict buffer PlanesBuffer {
+	Plane planes[];
+}
+m_planesBuffer;
+
+
+
+// ------------- Constants -----------------
+float Infinity = 9999999.0;
+
+vec4 SkyLow = vec4(0.6, 0.4, 0.2, 1.0);
+vec4 SkyMiddle = vec4(0.35, 0.7, 0.8, 1.0);
+vec4 SkyHigh = vec4(0.7, 0.8, 0.9, 1.0);
+vec4 LightColor = vec4(1.0);
+
+int BounceTests = 10;
 
 
 
@@ -88,6 +118,28 @@ void TestSphereHit(Ray ray, Sphere sphere, inout RayHit bestHit)
 
 
 
+void TestPlaneHit(Ray ray, Plane plane, inout RayHit bestHit)
+{
+	// see https://stackoverflow.com/questions/23975555/how-to-do-ray-plane-intersection
+	float denom = -dot(plane.normal, ray.direction);
+	if (denom > 0.00001) // We only want to hit from the front side of the plane
+	{
+		float origDistToPlane = dot(ray.origin - plane.location, plane.normal);
+		float hitDist = origDistToPlane / denom;
+
+		// hitDist should always be valid
+		if (hitDist > 0.0 && hitDist < bestHit.dist)
+		{
+			bestHit.dist = hitDist;
+			bestHit.location = ray.origin + ray.direction * hitDist;
+			bestHit.normal = plane.normal;
+			bestHit.color = plane.color;
+		}
+	}
+}
+
+
+
 // Unpacking the sphere
 Sphere GetSphere(mat4 sphereData)
 {
@@ -105,34 +157,86 @@ Sphere GetSphere(mat4 sphereData)
 }
 
 
+vec3 GetSkyColorForDirection(vec3 direction)
+{
+	float amount = dot(vec3(0.0, 1.0, 0.0), direction);
+	float lightAmount = pow(max(dot(-direction, m_lightBuffer.direction), 0.0), 100.0);
+	if (amount >= 0.0)
+		return mix(mix(SkyMiddle, SkyHigh, amount * amount).xyz, LightColor.xyz, lightAmount);
+	else
+		return mix(SkyMiddle, SkyLow, amount * amount).xyz;
+}
 
-// The code we want to execute in each invocation
-void main() {
-	ivec2 image_size = imageSize(m_renderedImage);
-	// Coords in the range [-1,1]
-	vec2 uv = vec2((gl_GlobalInvocationID.xy) / vec2(image_size) * 2.0 - 1.0);
-	float aspect_ratio = float(image_size.x) / float(image_size.y);
-	// uv.x *= aspect_ratio;
 
-	vec3 direction = (inverse(m_cameraBuffer.projection) * vec4(uv, 0.0, 1.0)).xyz;
-	direction = (m_cameraBuffer.transform * vec4(direction, 0.0)).xyz;
-	direction = normalize(direction);
 
-	Ray ray;
-	ray.origin = m_cameraBuffer.transform[3].xyz;
-	ray.direction = direction;
-	ray.energy = vec3(0.0);
-
+bool TestHit(inout Ray ray)
+{
 	RayHit bestHit;
 	bestHit.dist = 99999999.0;
 	bestHit.normal = vec3(0.0);
+
+	// Testing spheres
 	for (int i = 0; i < m_spheresBuffer.spheres.length(); i++)
 	{
 		TestSphereHit(ray, m_spheresBuffer.spheres[i], bestHit);
 	}
-	vec3 outColor = direction;
-	if (dot(bestHit.normal, bestHit.normal) > 0.0)
-		outColor = bestHit.normal;
+
+	// Testing the planes
+	for (int i = 0; i < m_planesBuffer.planes.length(); i++)
+	{
+		TestPlaneHit(ray, m_planesBuffer.planes[i], bestHit);
+	}
+
+	// We didn't hit anything, testing against the sky
+	if (bestHit.normal == vec3(0.0))
+	{
+		ray.energy = GetSkyColorForDirection(ray.direction);
+		return false;
+	}
+	else
+	{
+		ray.energy = bestHit.color.xyz;
+		ray.direction = reflect(ray.direction, bestHit.normal);
+		ray.origin = bestHit.location;
+	}
+
+	return true;
+}
+
+
+
+vec3 CastRay(vec3 origin, vec3 direction)
+{
+	Ray ray;
+	ray.origin = origin;
+	ray.direction = direction;
+	ray.energy = vec3(0.0);
+
+	for (int i = 0; i < BounceTests; i++)
+	{
+		if (!TestHit(ray))
+			break;
+	}
+	return ray.energy;
+}
+
+
+
+// The code we want to execute in each invocation
+void main() 
+{
+	ivec2 image_size = imageSize(m_renderedImage);
+	// Coords in the range [-1,1]
+	vec2 uv = vec2((gl_GlobalInvocationID.xy) / vec2(image_size) * 2.0 - 1.0);
+	float aspect_ratio = float(image_size.x) / float(image_size.y);
+	uv.y = - uv.y;
+	// uv.x *= aspect_ratio;
+	vec3 direction = (inverse(m_cameraBuffer.projection) * vec4(uv, 0.0, 1.0)).xyz;
+	direction = (m_cameraBuffer.transform * vec4(direction, 0.0)).xyz;
+	direction = normalize(direction);
+
+	vec3 outColor = CastRay(m_cameraBuffer.transform[3].xyz, direction);
+	
 
 	// gl_GlobalInvocationID.x uniquely identifies this invocation across all work groups
 	// my_data_buffer.data[gl_GlobalInvocationID.x] *= 2.0;

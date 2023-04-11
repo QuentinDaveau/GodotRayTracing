@@ -2,7 +2,7 @@
 extends CSGSphere3D
 class_name RayTracedSphere
 
-const RayTracedGroup = "RayTracedObjects"
+const RayTracedGroup = "RayTracedSpheres"
 
 @export_group("Raytrace")
 @export var _albedo: Color

@@ -9,6 +9,10 @@ var output_tex : RID
 
 var bindings : Array
 var spheres: Array[RayTracedSphere] = []
+var planes: Array[RayTracedPlane] = []
+
+
+var m_raytracing := true
 
 
 @onready
@@ -31,8 +35,10 @@ func matrix_to_bytes(t : Projection):
 
 func _ready() -> void:
 	# Get all spheres
-	for sphere in get_tree().get_nodes_in_group("RayTracedObjects"):
+	for sphere in get_tree().get_nodes_in_group("RayTracedSpheres"):
 		spheres.append(sphere)
+	for plane in get_tree().get_nodes_in_group("RayTracedPlanes"):
+		planes.append(plane)
 	
 	# Create a local rendering device.
 	rd = RenderingServer.create_local_rendering_device()
@@ -60,8 +66,8 @@ func _ready() -> void:
 	output_tex_uniform.binding = 0
 	output_tex_uniform.add_id(output_tex)
 	
-	# Bindings: Texture, time, camera, light, spheres
-	bindings.resize(5)
+	# Bindings: Texture, time, camera, light, spheres, planes
+	bindings.resize(6)
 	bindings[0] = output_tex_uniform
 	
 
@@ -71,7 +77,13 @@ func _process(delta: float) -> void:
 		transform = transform.rotated(Vector3.UP, -Input.get_last_mouse_velocity().x * delta * 0.05)
 		transform = transform.rotated(Vector3.UP.cross(transform.basis.z).normalized(), -Input.get_last_mouse_velocity().y * delta * 0.05)
 	
-	_render(delta)
+	if (Input.is_action_just_pressed("ui_text_backspace")):
+		m_raytracing = !m_raytracing
+		if (!m_raytracing):
+			%TextureRect.reset()
+	
+	if (m_raytracing):
+		_render(delta)
 	
 
 
@@ -134,6 +146,18 @@ func _render(delta: float) -> void:
 	spheres_data_uniform.binding = 4
 	spheres_data_uniform.add_id(spheres_data_buffer)
 	bindings[4] = spheres_data_uniform
+	
+	# Planes buffer
+	var planes_data := PackedFloat32Array([])
+	for plane in planes:
+		planes_data += plane.GetFormattedData()
+	var planes_data_bytes := planes_data.to_byte_array()
+	var planes_data_buffer = rd.storage_buffer_create(planes_data_bytes.size(), planes_data_bytes)
+	var planes_data_uniform := RDUniform.new()
+	planes_data_uniform.uniform_type = RenderingDevice.UNIFORM_TYPE_STORAGE_BUFFER
+	planes_data_uniform.binding = 5
+	planes_data_uniform.add_id(planes_data_buffer)
+	bindings[5] = planes_data_uniform
 	
 	uniform_set = rd.uniform_set_create(bindings, shader, 0)
 	

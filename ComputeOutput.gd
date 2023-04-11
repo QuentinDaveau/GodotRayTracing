@@ -10,3 +10,7 @@ func _ready() -> void:
 func set_data(data : PackedByteArray):
 	var image := Image.create_from_data(texture_size.x, texture_size.y, false, Image.FORMAT_RGBAF, data)
 	texture.update(image)
+
+func reset() -> void:
+	var image = Image.create(texture_size.x, texture_size.y, false, Image.FORMAT_RGBAF)
+	texture.update(image)
