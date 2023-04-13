@@ -7,7 +7,7 @@ const RayTracedGroup = "RayTracedPlanes"
 @export_group("Raytrace")
 @export var _albedo: Color
 @export var _emission: float
-@export var _roughness: float
+@export var _specular: float
 @export var _clearcoat: float
 @export var _subsurface_scattering: float
 
@@ -25,12 +25,12 @@ func _process(delta: float) -> void:
 func GetFormattedData() -> PackedFloat32Array:
 	# Center, normal, then parameters defined above in same order
 	var data: PackedFloat32Array = [
-		transform.origin.x, transform.origin.y, transform.origin.z, 0.0,
-		transform.basis.y.x, transform.basis.y.y, transform.basis.y.z, 0.0,
-		size.x, size.z, 0.0, 0.0,
-		_albedo.r, _albedo.g, _albedo.b, _albedo.a,
+		transform.origin.x, transform.origin.y, transform.origin.z,
 		_emission,
-		_roughness,
+		transform.basis.y.x, transform.basis.y.y, transform.basis.y.z,
+		_specular,
+		size.x, size.z,
 		_clearcoat,
-		_subsurface_scattering]
+		_subsurface_scattering,
+		_albedo.r, _albedo.g, _albedo.b, _albedo.a]
 	return data

@@ -148,7 +148,7 @@ func _render(delta: float) -> void:
 	bindings[4] = spheres_data_uniform
 	
 	# Planes buffer
-	var planes_data := PackedFloat32Array([])
+	var planes_data := PackedFloat32Array()
 	for plane in planes:
 		planes_data += plane.GetFormattedData()
 	var planes_data_bytes := planes_data.to_byte_array()
