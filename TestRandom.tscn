@@ -1,0 +1,60 @@
+[gd_scene load_steps=2 format=3 uid="uid://bpoq58865p0lm"]
+
+[sub_resource type="GDScript" id="GDScript_g1e6t"]
+script/source = "extends Node3D
+
+var c : Array[int] = [5360]
+var lines := []
+
+
+func _ready() -> void:
+	for i in range(1000):
+		draw_line(Vector3.ZERO, GetRandDir(Vector3.RIGHT, c), 10.0)
+
+# Called every frame. 'delta' is the elapsed time since the previous frame.
+func _process(delta: float) -> void:
+	return
+	for mesh in lines:
+		mesh.queue_free()
+	lines.clear()
+	draw_line(Vector3.ZERO, GetRandDir(Vector3.FORWARD, c), 10.0)
+
+
+func randNormDist(rand: Array) -> float:
+	var theta := 2.0 * 3.1415926 * Random(rand);
+	var rho := sqrt(-2.0 * log(Random(rand)));
+	return rho * cos(theta);
+
+
+
+func GetRandDir(normal: Vector3, rand: Array) -> Vector3:
+	var vec = Vector3(Random(rand), Random(rand), Random(rand)).normalized();
+	return vec * sign(vec.dot(normal));
+
+
+func Random(val: Array) -> float:
+	val[0] *= abs((val[0] + 195439) * (val[0] + 124395) * (val[0] + 845922)) + 1;
+	return abs(val[0] / 9223372036854775807.0);
+
+
+
+func draw_line(start: Vector3, dir: Vector3, length: float) -> void:
+	var mesh := MeshInstance3D.new()
+	var imm := ImmediateMesh.new()
+	
+	mesh.mesh = imm
+	imm.surface_begin(Mesh.PRIMITIVE_LINES)
+	imm.surface_add_vertex(start)
+	imm.surface_add_vertex(start + dir * length)
+	imm.surface_end()
+	
+	lines.append(mesh)
+	get_tree().get_root().add_child.call_deferred(mesh)
+"
+
+[node name="Node3D" type="Node3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0.0686573)
+script = SubResource("GDScript_g1e6t")
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 3.13642)

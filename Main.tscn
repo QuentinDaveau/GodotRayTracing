@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3 uid="uid://dsoj8mkno20tr"]
+[gd_scene load_steps=13 format=3 uid="uid://dsoj8mkno20tr"]
 
 [ext_resource type="Script" path="res://rayTraceCamera.gd" id="2_4c22r"]
 [ext_resource type="Texture2D" uid="uid://dvnis6lalcjqi" path="res://icon.svg" id="2_bgsm1"]
@@ -19,15 +19,52 @@ sky = SubResource("Sky_sjqv0")
 tonemap_mode = 2
 glow_enabled = true
 
+[sub_resource type="LabelSettings" id="LabelSettings_6hx0w"]
+font_color = Color(0, 0, 0, 1)
+outline_size = 2
+
+[sub_resource type="Animation" id="Animation_cimfp"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Node3D:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_uxaqn"]
+resource_name = "new_animation"
+length = 20.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Node3D:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 20),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector3(0, -1.5708, 0), Vector3(0, -1.5708, 6.28319)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_kahit"]
+_data = {
+"RESET": SubResource("Animation_cimfp"),
+"new_animation": SubResource("Animation_uxaqn")
+}
+
 [node name="Node3D" type="Node3D"]
 
 [node name="WorldEnvironment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_dcdbx")
-
-[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
-unique_name_in_owner = true
-transform = Transform3D(-0.866023, -0.433016, 0.250001, 0, 0.499998, 0.866027, -0.500003, 0.749999, -0.43301, 0, 0, 0)
-shadow_enabled = true
 
 [node name="Camera3D" type="Camera3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 20)
@@ -52,25 +89,40 @@ script = ExtResource("3_o2n48")
 radius = 5.0
 script = ExtResource("3_qd2u3")
 _albedo = Color(1, 1, 1, 1)
-_specular = 1.0
 
 [node name="RayTracedSphere2" type="CSGSphere3D" parent="." groups=["RayTracedObjects", "RayTracedSpheres"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10.86, 3.47126, -1.06165)
 radius = 5.0
 script = ExtResource("3_qd2u3")
 _albedo = Color(1, 1, 1, 1)
-_specular = 1.0
 
 [node name="RayTracedSphere3" type="CSGSphere3D" parent="." groups=["RayTracedObjects", "RayTracedSpheres"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28.3958, 24.7896, -6.91492)
 radius = 5.0
 script = ExtResource("3_qd2u3")
 _albedo = Color(1, 1, 1, 1)
-_specular = 1.0
 
 [node name="RayTracedPlane" type="CSGBox3D" parent="." groups=["RayTracedObjects", "RayTracedPlanes"]]
-transform = Transform3D(1, 0, 0, 0, 1, 2.98023e-08, 0, -2.98023e-08, 1, -8.04066, -0.824553, -5.67011)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8.04066, -0.824553, -5.67011)
 size = Vector3(1000, 0.1, 1000)
 script = ExtResource("5_44bmy")
-_albedo = Color(0.231373, 0.713726, 0.25098, 1)
-_specular = 1.0
+_albedo = Color(0.329412, 0.803922, 0, 1)
+
+[node name="Label" type="Label" parent="."]
+unique_name_in_owner = true
+offset_right = 40.0
+offset_bottom = 23.0
+text = "25.0"
+label_settings = SubResource("LabelSettings_6hx0w")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+autoplay = "new_animation"
+libraries = {
+"": SubResource("AnimationLibrary_kahit")
+}
+
+[node name="Node3D" type="Node3D" parent="."]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="Node3D"]
+unique_name_in_owner = true
+transform = Transform3D(-4.37114e-08, 0, 1, 0, 1, 0, -1, 0, -4.37114e-08, 500, 0, 0)

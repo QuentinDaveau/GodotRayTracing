@@ -30,7 +30,6 @@ struct Ray
 	vec3 origin;
 	vec3 direction;
 	vec3 color;
-	float energy;
 };
 
 struct RayHit
@@ -85,13 +84,27 @@ m_planesBuffer;
 float Infinity = 9999999.0;
 float Golden = 3.88322207745093;
 
-vec4 SkyLow = vec4(0.6, 0.4, 0.2, 0.5);
-vec4 SkyMiddle = vec4(0.35, 0.7, 0.8, 0.5);
-vec4 SkyHigh = vec4(0.7, 0.8, 0.9, 0.5);
-vec4 LightColor = vec4(1.0);
+vec3 SkyLow = vec3(0.6, 0.4, 0.2);
+vec3 SkyMiddle = vec3(0.35, 0.7, 0.8);
+vec3 SkyHigh = vec3(0.7, 0.8, 0.9);
+vec3 LightColor = vec3(100.0);
 
-int BounceTests = 1;
-int MaxDiffuseTests = 2;
+int BounceTests = 5;
+int RaysPerPixel = 100;
+
+float Random(inout float seed)
+{
+	float rand = sin(seed * 15848.0);
+	seed = mod(seed + rand, 10.0) + 0.00001;
+	// val *= (val + 1951439) * (val + 1252395) * (val + 5215922);
+	return fract(rand);
+}
+
+
+float RandomM11(inout float seed)
+{
+	return (Random(seed) * 2.0) - 1.0;
+}
 
 
 
@@ -101,7 +114,7 @@ void TestSphereHit(Ray ray, Sphere sphere, inout RayHit bestHit)
 	float radSqr = sphere.radius * sphere.radius;
 	vec3 direction = sphere.center - ray.origin;
 	float proj = dot(ray.direction, direction);
-	if (proj < 0)
+	if (proj < 0.0)
 		return;
 	float projDistSqr = dot(direction, direction) - proj * proj; // Dot a vector by itself allows to get its amplitude squared
 	if (projDistSqr > radSqr)
@@ -151,9 +164,9 @@ vec3 GetSkyColorForDirection(vec3 direction)
 	float amount = dot(vec3(0.0, 1.0, 0.0), direction);
 	float lightAmount = pow(max(dot(-direction, m_lightBuffer.direction), 0.0), 100.0);
 	if (amount >= 0.0)
-		return mix(mix(SkyMiddle, SkyHigh, amount * amount).xyz, LightColor.xyz, lightAmount);
+		return mix(mix(SkyMiddle, SkyHigh, amount * amount), LightColor, lightAmount);
 	else
-		return mix(SkyMiddle, SkyLow, amount * amount).xyz;
+		return mix(SkyMiddle, SkyLow, amount * amount);
 }
 
 
@@ -180,12 +193,13 @@ bool TestHit(Ray ray, inout RayHit hit)
 
 
 
-vec3 GetFibDir(int i, int samples, vec3 normal)
+vec3 GetFibDir(int i, int samples, vec3 normal, float rand)
 {
 	// Fibonacci
-	float y = 1.0 - ((i / float(samples)) * 2.0);  // y goes from 1 to 0
+	float randi = i * (1.0 - rand * 0.01);
+	float y = 1.0 - ((randi / float(samples)) * 2.0);  // y goes from 1 to 0
 	float radius = sqrt(1 - y * y);
-	float theta = Golden * i;
+	float theta = Golden * randi;
 	float x = cos(theta) * radius;
 	float z = sin(theta) * radius;
 
@@ -195,85 +209,57 @@ vec3 GetFibDir(int i, int samples, vec3 normal)
 
 
 
-void ProcessTests(inout Ray rays[64], inout int raysLength, inout Ray nextRays[64], inout int nextRaysLength, inout Ray endedRays[64], inout int endedRaysLength, inout bool lastTest)
+
+float randNormDist(inout float rand)
 {
-	nextRaysLength = 0;
-	RayHit hit;
-
-	for (int i = 0; i < raysLength; i++)
-	{
-		if (endedRaysLength >= endedRays.length())
-			break;
-
-		if (!TestHit(rays[i], hit))
-		{
-			rays[i].color = GetSkyColorForDirection(rays[i].direction);
-			endedRays[endedRaysLength] = rays[i];
-			endedRaysLength++;
-		}
-		else
-		{
-			if (lastTest || nextRaysLength >= nextRays.length()) // This is the last step or we cannot process more rays, we stop here
-			{
-				endedRays[endedRaysLength] = rays[i];
-				endedRaysLength++;
-			}
-			else if (hit.specular >= 0.99) // We hit a perfectly reflective surface
-			{
-				nextRays[nextRaysLength].origin = hit.location;
-				nextRays[nextRaysLength].direction = reflect(rays[i].direction, hit.normal);
-				nextRays[nextRaysLength].color = rays[i].color * hit.color;
-				nextRays[nextRaysLength].energy = rays[i].energy;
-				nextRaysLength++;
-			}
-			else
-			{
-				for (int j = 0; j < MaxDiffuseTests; j++)
-				{
-					nextRays[nextRaysLength].origin = hit.location;
-					nextRays[nextRaysLength].direction = mix(GetFibDir(j, MaxDiffuseTests, hit.normal), reflect(rays[i].direction, hit.normal), hit.specular);
-					nextRays[nextRaysLength].color = rays[i].color * hit.color;
-					nextRays[nextRaysLength].energy = (rays[i].energy / MaxDiffuseTests) * dot(hit.normal, nextRays[nextRaysLength].direction); // Lambert's cosine law
-					nextRaysLength++;
-				}
-			}
-		}
-	}
+	float theta = 2.0 * 3.1415926 * Random(rand);
+	float rho = sqrt(-2.0 * (log(Random(rand) * 0.999 + 0.001)));
+	return rho * cos(theta);
 }
 
 
 
-vec3 CastRay(vec3 origin, vec3 direction)
+vec3 GetRandDir(vec3 normal, inout float rand)
 {
-	Ray rays[64];
-	rays[0] = Ray(origin, direction, vec3(1.0), 1.0);
-	int raysLength = 1;
+	// float x = RandomM11(rand);
+	// float y = RandomM11(rand) * ((cos(x * 3.1415926) / 2.0) + 1.0);
+	// float z = sign(RandomM11(rand)) * ((cos((abs(x) + abs(y)) * 3.1415926) / 2.0) + 1.0);
+	// vec3 vec = vec3(x, y, z);
+	vec3 vec = normalize(vec3(RandomM11(rand), RandomM11(rand), RandomM11(rand)));
+	return vec * sign(dot(normal, vec));
+}
 
-	Ray nextRays[64];
-	int nextRaysLength = 0;
-	
-	Ray endedRays[64];
-	int endedRaysLength = 0;
 
-	for (int stp = 0; stp < BounceTests + 1; stp++)
+
+vec3 CastRay(vec3 origin, vec3 direction, inout float seed)
+{
+	vec3 color = vec3(0.0);
+	RayHit hit;
+	for (int r = 0; r < RaysPerPixel; r++)
 	{
-		bool inverse = mod(stp, 2) != 0;
-		bool isLast = stp >= BounceTests;
-
-		if (!inverse)
-			ProcessTests(rays, raysLength, nextRays, nextRaysLength, endedRays, endedRaysLength, isLast);
-		else
-			ProcessTests(nextRays, nextRaysLength, rays, raysLength, endedRays, endedRaysLength, isLast);
+		Ray ray = Ray(origin, direction, vec3(1.0));
+		for (int stp = 0; stp < BounceTests + 1; stp++)
+		{
+			if (!TestHit(ray, hit))
+			{
+				ray.color *= GetSkyColorForDirection(ray.direction);
+				break;
+			}
+			else
+			{
+				ray.color *= hit.color * dot(-hit.normal, ray.direction); // Lambert's cosine law
+				// ray.direction = mix(GetFibDir(r, RaysPerPixel, hit.normal, Random(seed)), reflect(ray.direction, hit.normal), hit.specular);
+				ray.direction = mix(GetRandDir(hit.normal, seed), reflect(ray.direction, hit.normal), hit.specular);
+				ray.origin = hit.location;
+				// ray.color = GetRandDir(hit.normal, seed);
+				// break;
+				// ray.color *= hit.normal; // Lambert's cosine law
+			}
+		}
+		color += ray.color;
 	}
 
-	// We did all our rays, time to sum-up all of the ended rays and mix their colors. The sum of all energies should be 1
-	vec3 average;
-	for (int i = 0; i < endedRaysLength; i++)
-	{
-		average += endedRays[i].color * endedRays[i].energy;
-	}
-
-	return average;
+	return color / RaysPerPixel;
 }
 
 
@@ -286,12 +272,16 @@ void main()
 	vec2 uv = vec2((gl_GlobalInvocationID.xy) / vec2(image_size) * 2.0 - 1.0);
 	float aspect_ratio = float(image_size.x) / float(image_size.y);
 	uv.y = - uv.y;
-	// uv.x *= aspect_ratio;
+
 	vec3 direction = (inverse(m_cameraBuffer.projection) * vec4(uv, 0.0, 1.0)).xyz;
 	direction = (m_cameraBuffer.transform * vec4(direction, 0.0)).xyz;
 	direction = normalize(direction);
 
-	vec3 outColor = CastRay(m_cameraBuffer.transform[3].xyz, direction);
+	//uint seed = uint(m_dataBuffer.time * gl_GlobalInvocationID.x * image_size.x + gl_GlobalInvocationID.y);
+	float seed = fract(sin(dot(uv.xy, vec2(12.9898, 78.233))) * 4358.5453123 * m_dataBuffer.time);
+	vec3 outColor = CastRay(m_cameraBuffer.transform[3].xyz, direction, seed);
+
+	// vec3 outColor = vec3(Random(seed), Random(seed), Random(seed));
 	
 
 	// gl_GlobalInvocationID.x uniquely identifies this invocation across all work groups

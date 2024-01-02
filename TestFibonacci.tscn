@@ -6,7 +6,7 @@ script/source = "extends Node3D
 
 var lines := []
 var reflection := 1.0
-var angle := 0.0
+var angle := PI / 4.0
 
 
 # Called when the node enters the scene tree for the first time.
@@ -22,21 +22,37 @@ func _process(delta: float) -> void:
 	
 	# Fibonacci
 	var phi = PI * (sqrt(5.0) - 1.0)  # golden angle in radians
-	print(phi)
 	
-#	var cosAngle: float = max(acos(reflection) / (PI * 0.5), 0.0)
-	var cosAngle: float = clamp(reflection, 0.0, 1.0)
-	var samples: float = lerp(1, 20, cosAngle)
+	var cosAngle: float = max(acos(reflection) / (PI * 0.5), 0.0)
+#	var cosAngle: float = clamp(reflection, 0.0, 1.0)
+#	var samples: float = lerp(20, 1, reflection)
+#
+	var planeAngle := Vector3(0.0, 0.0, 1.0).normalized()
 	
-	var refl := Vector3.DOWN.rotated(Vector3(0.5, 0.0, 0.5).normalized(), angle).reflect(Vector3.UP)
-
+#	var refl := Vector3.DOWN.rotated(planeAngle, angle).bounce(Vector3.UP)
+#	var rotAxis := Vector3.UP.cross(refl).normalized()
+#	var rotAngle := acos(Vector3.UP.dot(refl))
+#
+#	for i in range(20):
+#		var y = (1.0 - ((i / float(samples)) * cosAngle))  # y goes from 1 to 0
+#		var radius = sqrt(1 - y * y)  # radius at y
+#		var theta = phi * i # golden angle increment
+#		var x = cos(theta) * radius
+#		var z = sin(theta) * radius
+#		draw_line(Vector3.ZERO, Vector3(x, y, z).rotated(rotAxis, rotAngle), 1.0)
+	
+	var refl := Vector3.DOWN.rotated(planeAngle, angle).bounce(Vector3.UP)
+	var rotAxis := Vector3.UP.cross(refl).normalized()
+	var rotAngle := acos(Vector3.UP.dot(refl))
+	
+	var samples := 10
 	for i in range(samples):
-		var y = 1.0 - ((i / float(samples)) * 2.0)  # y goes from 1 to 0
+		var theta = phi * i # golden angle increment
+		var y = 1.0 - (i / float(samples) * (1.0 - reflection))  # y goes from 1 to 0
 		var radius = sqrt(1 - y * y)  # radius at y
-		var theta = phi * i  # golden angle increment
 		var x = cos(theta) * radius
 		var z = sin(theta) * radius
-		draw_line(Vector3.ZERO, Vector3(x, y, z) * sign(Vector3(0.5, 1.0, 0.0).normalized().dot(Vector3(x, y, z))), 1.0)
+		draw_line(Vector3.ZERO, Vector3(x, y, z).rotated(rotAxis, rotAngle), 1.0)
 
 
 

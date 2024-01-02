@@ -10,6 +10,7 @@ var output_tex : RID
 var bindings : Array
 var spheres: Array[RayTracedSphere] = []
 var planes: Array[RayTracedPlane] = []
+var times : Array[int] = []
 
 
 var m_raytracing := true
@@ -176,8 +177,17 @@ func _render(delta: float) -> void:
 	rd.compute_list_end()
 	# Force the GPU to start our commands
 	rd.submit()
+	
+	var prev := Time.get_ticks_usec()
 	# Force the CPU to wait for the GPU to finish with the recorded commands
 	rd.sync()
+	times.append(Time.get_ticks_usec() - prev)
+	if (times.size() > 20):
+		times.remove_at(0)
+	var avg := 0
+	for time in times:
+		avg += time
+	%Label.text = str(avg / 20)
 	
 	# Now we can grab our data from the output texture
 	var byte_data : PackedByteArray = rd.texture_get_data(output_tex, 0)
